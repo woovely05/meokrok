@@ -1,0 +1,5 @@
+package com.wuvel.meokrok
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()
