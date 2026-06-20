@@ -405,8 +405,45 @@ class _SettingsCard extends ConsumerWidget {
             textColor: Colors.redAccent,
             showChevron: false,
             onTap: () async {
-              await ref.read(authProvider.notifier).logout();
-              if (context.mounted) context.go('/login');
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  backgroundColor: colors.surface,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  title: Text(
+                    '로그아웃',
+                    style: GoogleFonts.notoSansKr(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: colors.textDark),
+                  ),
+                  content: Text(
+                    '정말 로그아웃 하시겠어요?',
+                    style: GoogleFonts.notoSansKr(
+                        fontSize: 13, color: colors.textGrey),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: Text('취소',
+                          style: GoogleFonts.notoSansKr(
+                              color: colors.textGrey)),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: Text('로그아웃',
+                          style: GoogleFonts.notoSansKr(
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed == true) {
+                await ref.read(authProvider.notifier).logout();
+                if (context.mounted) context.go('/login');
+              }
             },
           ),
         ],

@@ -190,6 +190,30 @@ class HomeScreen extends ConsumerWidget {
                             unit: 'kcal',
                             color: AppColors.calorieBar,
                           ),
+                          const SizedBox(height: 8),
+                          _NutritionBar(
+                            label: '단백질',
+                            value: nutrition.protein,
+                            goal: calGoal * 0.30 / 4,
+                            unit: 'g',
+                            color: AppColors.proteinBar,
+                          ),
+                          const SizedBox(height: 8),
+                          _NutritionBar(
+                            label: '탄수화물',
+                            value: nutrition.carbs,
+                            goal: calGoal * 0.45 / 4,
+                            unit: 'g',
+                            color: AppColors.carbBar,
+                          ),
+                          const SizedBox(height: 8),
+                          _NutritionBar(
+                            label: '지방',
+                            value: nutrition.fat,
+                            goal: calGoal * 0.25 / 9,
+                            unit: 'g',
+                            color: AppColors.fatBar,
+                          ),
                         ],
                       ),
                     ),
@@ -506,17 +530,22 @@ class _WaterTracker extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           GestureDetector(
-            onTap: () =>
-                ref.read(waterProvider(date).notifier).increment(),
+            onTap: count >= _goal
+                ? null
+                : () => ref.read(waterProvider(date).notifier).increment(),
             child: Container(
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: colors.primaryLight,
+                color: count >= _goal ? colors.cardBg : colors.primaryLight,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: colors.inputBorder),
               ),
-              child: Icon(Icons.add, size: 16, color: colors.primary),
+              child: Icon(
+                Icons.add,
+                size: 16,
+                color: count >= _goal ? colors.navInactive : colors.primary,
+              ),
             ),
           ),
         ],

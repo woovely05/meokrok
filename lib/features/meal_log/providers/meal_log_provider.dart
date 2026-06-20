@@ -239,13 +239,13 @@ class MealEditorNotifier extends StateNotifier<MealEditorState> {
     _invalidateDependents();
   }
 
-  Future<void> copyFromDate(MealType type, DateTime fromDate) async {
+  Future<bool> copyFromDate(MealType type, DateTime fromDate) async {
     final logs = await _repo.getLogsForDate(_userId, fromDate);
     final srcLog = logs.cast<MealLogModel?>().firstWhere(
       (l) => l?.mealType == type,
       orElse: () => null,
     );
-    if (srcLog == null || srcLog.foods.isEmpty) return;
+    if (srcLog == null || srcLog.foods.isEmpty) return false;
 
     final existing = state.logs[type];
     final MealLogModel targetLog;
@@ -274,6 +274,7 @@ class MealEditorNotifier extends StateNotifier<MealEditorState> {
     await _repo.saveMealLog(updated);
     state = state.withLog(type, updated);
     _invalidateDependents();
+    return true;
   }
 
   Future<void> saveNote(MealType type, String? note) async {

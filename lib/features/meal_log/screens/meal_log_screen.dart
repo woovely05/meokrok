@@ -231,10 +231,34 @@ class _MealSection extends ConsumerWidget {
                             const SizedBox(width: 4),
                             GestureDetector(
                               onTap: () {
+                                final deletedFood = food;
                                 ref
                                     .read(mealEditorProvider((userId, date))
                                         .notifier)
                                     .removeFood(type, food.id);
+                                ScaffoldMessenger.of(context)
+                                  ..clearSnackBars()
+                                  ..showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        '${deletedFood.name} 삭제됨',
+                                        style: GoogleFonts.notoSansKr(
+                                            fontSize: 12),
+                                      ),
+                                      action: SnackBarAction(
+                                        label: '실행취소',
+                                        onPressed: () {
+                                          ref
+                                              .read(mealEditorProvider(
+                                                      (userId, date))
+                                                  .notifier)
+                                              .addFood(type, deletedFood);
+                                        },
+                                      ),
+                                      duration: const Duration(seconds: 3),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
                               },
                               child: Icon(
                                 Icons.close,
@@ -267,11 +291,23 @@ class _MealSection extends ConsumerWidget {
                   if (isEmpty) ...[
                     const SizedBox(height: 4),
                     GestureDetector(
-                      onTap: () {
+                      onTap: () async {
                         final yesterday = date.subtract(const Duration(days: 1));
-                        ref
+                        final success = await ref
                             .read(mealEditorProvider((userId, date)).notifier)
                             .copyFromDate(type, yesterday);
+                        if (!success && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '어제 ${type.label} 기록이 없어요.',
+                                style: GoogleFonts.notoSansKr(fontSize: 12),
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
                       },
                       child: Text(
                         '어제 불러오기',
@@ -294,9 +330,21 @@ class _MealSection extends ConsumerWidget {
                           lastDate: yesterday,
                         );
                         if (picked != null) {
-                          ref
+                          final success = await ref
                               .read(mealEditorProvider((userId, date)).notifier)
                               .copyFromDate(type, picked);
+                          if (!success && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '${DateFormat('M월 d일', 'ko_KR').format(picked)} ${type.label} 기록이 없어요.',
+                                  style: GoogleFonts.notoSansKr(fontSize: 12),
+                                ),
+                                behavior: SnackBarBehavior.floating,
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
                         }
                       },
                       child: Text(
@@ -387,11 +435,9 @@ class _MealSection extends ConsumerWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) => _AddFoodModal(
-        onAdd: (food) {
-          ref
-              .read(mealEditorProvider((userId, date)).notifier)
-              .addFood(type, food);
-        },
+        onAdd: (food) => ref
+            .read(mealEditorProvider((userId, date)).notifier)
+            .addFood(type, food),
       ),
     );
   }
@@ -400,7 +446,7 @@ class _MealSection extends ConsumerWidget {
 class _AddFoodModal extends ConsumerStatefulWidget {
   const _AddFoodModal({required this.onAdd});
 
-  final ValueChanged<FoodItemModel> onAdd;
+  final Future<void> Function(FoodItemModel) onAdd;
 
   @override
   ConsumerState<_AddFoodModal> createState() => _AddFoodModalState();
@@ -413,6 +459,7 @@ class _AddFoodModalState extends ConsumerState<_AddFoodModal> {
   String _unit = 'g';
   String? _error;
   bool _isLoadingAi = false;
+  bool _isSaving = false;
   double? _aiTotalCal; // AI가 추정한 총 칼로리 (입력 amount 기준)
 
   @override
@@ -462,7 +509,7 @@ class _AddFoodModalState extends ConsumerState<_AddFoodModal> {
     }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final name = _nameCtrl.text.trim();
     final amount = double.tryParse(_amountCtrl.text);
     final calText = _calCtrl.text.trim();
@@ -490,8 +537,9 @@ class _AddFoodModalState extends ConsumerState<_AddFoodModal> {
           BuiltinFoodDatabase.createManual(name, amount, _unit, 0);
     }
 
-    widget.onAdd(food);
-    Navigator.of(context).pop();
+    setState(() => _isSaving = true);
+    await widget.onAdd(food);
+    if (mounted) Navigator.of(context).pop();
   }
 
   @override
@@ -716,7 +764,11 @@ class _AddFoodModalState extends ConsumerState<_AddFoodModal> {
             ),
           ],
           const SizedBox(height: 16),
-          AppPrimaryButton(label: '추가', onPressed: _submit),
+          AppPrimaryButton(
+            label: '추가',
+            onPressed: _submit,
+            isLoading: _isSaving,
+          ),
         ],
       ),
     );

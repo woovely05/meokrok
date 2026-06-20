@@ -24,8 +24,8 @@ class AnalysisScreen extends ConsumerWidget {
     final logsAsync = ref.watch(mealLogsForDateProvider(date));
     final calGoal = user.dailyCalorieGoal;
 
-    final remaining =
-        (calGoal - nutrition.calories).clamp(0.0, double.infinity);
+    final difference = calGoal - nutrition.calories;
+    final isExceeded = difference < 0;
     final achievement = calGoal > 0
         ? ((nutrition.calories / calGoal) * 100).clamp(0.0, 999.0)
         : 0.0;
@@ -96,8 +96,8 @@ class AnalysisScreen extends ConsumerWidget {
                       const VerticalDivider(
                           color: Colors.white38, width: 1, thickness: 0.5),
                       _StatItem(
-                        label: '남은 칼로리',
-                        value: remaining.toStringAsFixed(0),
+                        label: isExceeded ? '초과 칼로리' : '남은 칼로리',
+                        value: difference.abs().toStringAsFixed(0),
                         unit: 'kcal',
                       ),
                       const VerticalDivider(
