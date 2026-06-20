@@ -46,6 +46,9 @@ dependencies:
   # UUID
   uuid: ^4.4.0
 
+  # 로컬 LLM (llama.cpp 기반)
+  llamadart: ^0.6.14
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

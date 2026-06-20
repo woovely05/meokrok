@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_button.dart';
+import '../../../core/services/gemini_service.dart';
 import '../../../data/models/food_item_model.dart';
 import '../../../data/models/meal_log_model.dart';
 import '../../../data/repositories/meal_repository.dart';
@@ -411,6 +412,8 @@ class _AddFoodModalState extends ConsumerState<_AddFoodModal> {
   final _calCtrl = TextEditingController();
   String _unit = 'g';
   String? _error;
+  bool _isLoadingAi = false;
+  double? _aiTotalCal; // AI가 추정한 총 칼로리 (입력 amount 기준)
 
   @override
   void dispose() {
@@ -418,6 +421,35 @@ class _AddFoodModalState extends ConsumerState<_AddFoodModal> {
     _amountCtrl.dispose();
     _calCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _estimateCalories() async {
+    final name = _nameCtrl.text.trim();
+    final amount = double.tryParse(_amountCtrl.text);
+    if (name.isEmpty || amount == null || amount <= 0) {
+      setState(() => _error = '음식명과 양을 먼저 입력해주세요');
+      return;
+    }
+    setState(() {
+      _isLoadingAi = true;
+      _error = null;
+    });
+    final calories = await estimateCaloriesWithAI(name, amount, _unit);
+    setState(() => _isLoadingAi = false);
+    if (calories != null) {
+      if (_unit == '개' || _unit == '인분') {
+        // AI가 1단위당 칼로리 반환 → amount 곱해서 총 칼로리 계산
+        final total = calories * (double.tryParse(_amountCtrl.text) ?? 1.0);
+        _aiTotalCal = total;
+        _calCtrl.text = total.toStringAsFixed(0);
+      } else {
+        // g/ml: AI가 100단위당 칼로리 반환 → createManual에 그대로 전달
+        _aiTotalCal = null;
+        _calCtrl.text = calories.toStringAsFixed(0);
+      }
+    } else {
+      setState(() => _error = 'AI 추정에 실패했습니다. 직접 입력해주세요.');
+    }
   }
 
   void _submit() {
@@ -432,7 +464,12 @@ class _AddFoodModalState extends ConsumerState<_AddFoodModal> {
 
     FoodItemModel food;
     if (cal != null) {
-      food = BuiltinFoodDatabase.createManual(name, amount, _unit, cal);
+      // _aiTotalCal: AI가 준 총 칼로리 → createManual이 기대하는 per-100 값으로 역산
+      final caloriesPer100 = (_aiTotalCal != null)
+          ? _aiTotalCal! * 100.0 / amount
+          : cal;
+      _aiTotalCal = null;
+      food = BuiltinFoodDatabase.createManual(name, amount, _unit, caloriesPer100);
     } else {
       food = BuiltinFoodDatabase.findFood(name, amount, _unit) ??
           BuiltinFoodDatabase.createManual(name, amount, _unit, 0);
@@ -569,21 +606,93 @@ class _AddFoodModalState extends ConsumerState<_AddFoodModal> {
                           ),
                         )
                         .toList(),
-                    onChanged: (v) => setState(() => _unit = v ?? 'g'),
+                    onChanged: (v) {
+                      final next = v ?? 'g';
+                      setState(() => _unit = next);
+                      if (next == '개' || next == '인분') {
+                        _amountCtrl.text = '1';
+                      } else if (next == 'g' || next == 'ml') {
+                        _amountCtrl.text = '100';
+                      }
+                    },
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          _ModalField(
-            controller: _calCtrl,
-            label: '칼로리 (100g 기준, 선택)',
-            hint: '예: 150',
-            keyboardType: TextInputType.number,
-            minLines: 1,
-            maxLines: 1,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: _ModalField(
+                  controller: _calCtrl,
+                  label: '칼로리 kcal (선택)',
+                  hint: '예: 150',
+                  keyboardType: TextInputType.number,
+                  minLines: 1,
+                  maxLines: 1,
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _isLoadingAi ? null : _estimateCalories,
+                child: Container(
+                  width: 64,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: _isLoadingAi ? colors.primaryLight : colors.primary,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: _isLoadingAi
+                      ? const Center(
+                          child: SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          ),
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.auto_awesome,
+                                size: 14, color: Colors.white),
+                            const SizedBox(height: 2),
+                            Text(
+                              'AI 추천',
+                              style: GoogleFonts.notoSansKr(
+                                fontSize: 9,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ],
           ),
+          if (_aiTotalCal != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.info_outline, size: 11, color: colors.textGrey),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    'AI 추정값입니다. 정확한 칼로리는 제품 영양성분표를 확인해주세요.',
+                    style: GoogleFonts.notoSansKr(
+                      fontSize: 10,
+                      color: colors.textGrey,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           if (_error != null) ...[
             const SizedBox(height: 6),
             Text(

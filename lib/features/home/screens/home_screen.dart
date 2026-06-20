@@ -105,42 +105,6 @@ class HomeScreen extends ConsumerWidget {
                 child: Column(
                   children: [
                     AppCard(
-                      padding: const EdgeInsets.all(12),
-                      child: datesAsync.when(
-                        data: (dates) => _Calendar(
-                          selectedDate: selectedDate,
-                          datesWithLogs: dates,
-                          calMap: calMap,
-                          calGoal: calGoal,
-                          onSelected: (d) =>
-                              ref.read(selectedDateProvider.notifier).state = d,
-                        ),
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                        error: (_, _) => const SizedBox.shrink(),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (weeklyData.isNotEmpty)
-                      _WeeklyChart(data: weeklyData, calGoal: calGoal),
-                    if (weeklyData.isNotEmpty) const SizedBox(height: 12),
-                    AppPrimaryButton(
-                      label: '+ 오늘 식사 기록하기',
-                      onPressed: () {
-                        final d =
-                            DateFormat('yyyy-MM-dd').format(selectedDate);
-                        context.push('/meal-log/$d');
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _WaterTracker(
-                        count: waterCount, ref: ref, date: selectedDate),
-                    const SizedBox(height: 12),
-                    if (user != null)
-                      _ReportCard(
-                          userId: user.id, calGoal: calGoal.toDouble()),
-                    if (user != null) const SizedBox(height: 12),
-                    AppCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -229,7 +193,44 @@ class HomeScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 80),
+                    const SizedBox(height: 12),
+                    AppPrimaryButton(
+                      label: '+ 오늘 식사 기록하기',
+                      onPressed: () {
+                        final d =
+                            DateFormat('yyyy-MM-dd').format(selectedDate);
+                        context.push('/meal-log/$d');
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _WaterTracker(
+                        count: waterCount, ref: ref, date: selectedDate),
+                    const SizedBox(height: 12),
+                    AppCard(
+                      padding: const EdgeInsets.all(12),
+                      child: datesAsync.when(
+                        data: (dates) => _Calendar(
+                          selectedDate: selectedDate,
+                          datesWithLogs: dates,
+                          calMap: calMap,
+                          calGoal: calGoal,
+                          onSelected: (d) =>
+                              ref.read(selectedDateProvider.notifier).state = d,
+                        ),
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
+                        error: (_, _) => const SizedBox.shrink(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (user != null)
+                      _ReportCard(
+                          userId: user.id, calGoal: calGoal.toDouble()),
+                    if (user != null) const SizedBox(height: 12),
+                    if (weeklyData.isNotEmpty)
+                      _WeeklyChart(data: weeklyData, calGoal: calGoal),
+                    if (weeklyData.isNotEmpty) const SizedBox(height: 12),
+                    const SizedBox(height: 68),
                   ],
                 ),
               ),
