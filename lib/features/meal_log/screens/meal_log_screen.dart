@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import '../../../core/utils/app_date_formats.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/services/gemini_service.dart';
@@ -31,7 +31,7 @@ class MealLogScreen extends ConsumerWidget {
     final consumed = nutrition.calories;
     final remaining = calGoal - consumed;
     final ratio = (calGoal > 0 ? (consumed / calGoal).clamp(0.0, 1.0) : 0.0);
-    final formattedDate = DateFormat('M월 d일', 'ko_KR').format(date);
+    final formattedDate = AppDateFormats.mDayKorean.format(date);
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -337,7 +337,7 @@ class _MealSection extends ConsumerWidget {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  '${DateFormat('M월 d일', 'ko_KR').format(picked)} ${type.label} 기록이 없어요.',
+                                  '${AppDateFormats.mDayKorean.format(picked)} ${type.label} 기록이 없어요.',
                                   style: GoogleFonts.notoSansKr(fontSize: 12),
                                 ),
                                 behavior: SnackBarBehavior.floating,
@@ -359,7 +359,7 @@ class _MealSection extends ConsumerWidget {
                 ],
               ),
             ),
-            if (log?.note != null && log!.note!.isNotEmpty)
+            if (log?.note?.isNotEmpty ?? false)
               GestureDetector(
                 onTap: () => _showNoteModal(context, ref),
                 child: Padding(

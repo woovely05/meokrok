@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_date_formats.dart';
+import '../../../core/utils/calorie_feedback.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/bottom_nav.dart';
@@ -35,9 +37,10 @@ class HomeScreen extends ConsumerWidget {
         ? ((nutrition.calories / calGoal) * 100).clamp(0.0, 999.0)
         : 0.0;
 
-    final feedback = _generateSimpleFeedback(
+    final feedback = generateCalorieFeedback(
       calories: nutrition.calories,
-      calGoal: calGoal,
+      calGoal: calGoal.toDouble(),
+      brief: true,
     );
 
     return Scaffold(
@@ -121,8 +124,7 @@ class HomeScreen extends ConsumerWidget {
                               ),
                               GestureDetector(
                                 onTap: () {
-                                  final d = DateFormat('yyyy-MM-dd')
-                                      .format(selectedDate);
+                                  final d = AppDateFormats.ymd.format(selectedDate);
                                   context.push('/analysis/$d');
                                 },
                                 child: Text(
@@ -194,7 +196,7 @@ class HomeScreen extends ConsumerWidget {
                           _NutritionBar(
                             label: '단백질',
                             value: nutrition.protein,
-                            goal: calGoal * 0.30 / 4,
+                            goal: calGoal * AppConstants.proteinCalorieRatio / AppConstants.proteinKcalPerGram,
                             unit: 'g',
                             color: AppColors.proteinBar,
                           ),
@@ -202,7 +204,7 @@ class HomeScreen extends ConsumerWidget {
                           _NutritionBar(
                             label: '탄수화물',
                             value: nutrition.carbs,
-                            goal: calGoal * 0.45 / 4,
+                            goal: calGoal * AppConstants.carbCalorieRatio / AppConstants.carbKcalPerGram,
                             unit: 'g',
                             color: AppColors.carbBar,
                           ),
@@ -210,7 +212,7 @@ class HomeScreen extends ConsumerWidget {
                           _NutritionBar(
                             label: '지방',
                             value: nutrition.fat,
-                            goal: calGoal * 0.25 / 9,
+                            goal: calGoal * AppConstants.fatCalorieRatio / AppConstants.fatKcalPerGram,
                             unit: 'g',
                             color: AppColors.fatBar,
                           ),
@@ -222,7 +224,7 @@ class HomeScreen extends ConsumerWidget {
                       label: '+ 오늘 식사 기록하기',
                       onPressed: () {
                         final d =
-                            DateFormat('yyyy-MM-dd').format(selectedDate);
+                            AppDateFormats.ymd.format(selectedDate);
                         context.push('/meal-log/$d');
                       },
                     ),
@@ -266,16 +268,6 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  String _generateSimpleFeedback({
-    required double calories,
-    required double calGoal,
-  }) {
-    if (calories == 0) return '식사를 기록하면\n분석 결과를 알려드려요! 🥗';
-    final ratio = calGoal > 0 ? calories / calGoal : 0.0;
-    if (ratio > 1.2) return '오늘은 평소보다\n든든하게 드셨네요! 💪';
-    if (ratio < 0.6) return '조금 더 챙겨 드셔도\n좋을 것 같아요! 🍽️';
-    return '아주 적절한 식습관을\n유지하고 계시네요! ✨';
-  }
 }
 
 class _Calendar extends StatelessWidget {
@@ -298,10 +290,10 @@ class _Calendar extends StatelessWidget {
         '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
     final cal = calMap[key];
     if (cal == null) return null;
-    if (cal >= calGoal * 0.8 && cal <= calGoal * 1.2) {
+    if (cal >= calGoal * AppConstants.calorieGoalMinRatio && cal <= calGoal * AppConstants.calorieHighRatio) {
       return colors.primary.withValues(alpha: 0.15);
     }
-    if (cal > calGoal * 1.2) {
+    if (cal > calGoal * AppConstants.calorieHighRatio) {
       return Colors.orangeAccent.withValues(alpha: 0.2);
     }
     return Colors.blueAccent.withValues(alpha: 0.12);
@@ -455,7 +447,7 @@ class _WaterTracker extends StatelessWidget {
   final WidgetRef ref;
   final DateTime date;
 
-  static const _goal = 8;
+  static const _goal = AppConstants.waterDailyGoal;
 
   @override
   Widget build(BuildContext context) {

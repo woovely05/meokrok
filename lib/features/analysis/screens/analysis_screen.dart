@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/calorie_feedback.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/bottom_nav.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -30,9 +31,9 @@ class AnalysisScreen extends ConsumerWidget {
         ? ((nutrition.calories / calGoal) * 100).clamp(0.0, 999.0)
         : 0.0;
 
-    final feedback = _generateFeedback(
+    final feedback = generateCalorieFeedback(
       calories: nutrition.calories,
-      calGoal: calGoal,
+      calGoal: calGoal.toDouble(),
     );
 
     return Scaffold(
@@ -226,24 +227,6 @@ class AnalysisScreen extends ConsumerWidget {
     );
   }
 
-  String _generateFeedback({
-    required double calories,
-    required double calGoal,
-  }) {
-    if (calories == 0) return '오늘 아직 기록된 식사가 없어요. 식사를 기록해 영양 분석을 받아보세요! 🥗';
-
-    final calorieRatio = calGoal > 0 ? calories / calGoal : 0.0;
-
-    if (calorieRatio > 1.2) {
-      return '오늘 권장 칼로리를 ${((calorieRatio - 1) * 100).toStringAsFixed(0)}% 초과했어요. '
-          '내일은 가벼운 식단으로 균형을 맞춰보는 건 어떨까요? 💪';
-    } else if (calorieRatio < 0.6) {
-      return '오늘 섭취량이 권장량의 ${(calorieRatio * 100).toStringAsFixed(0)}%에 불과해요. '
-          '충분한 영양 섭취가 건강 유지에 중요해요! 🍽️';
-    } else {
-      return '오늘 권장 칼로리에 맞춰 적절하게 식사하셨네요! 꾸준한 식습관 관리가 건강의 첫걸음이에요. 훌륭해요! ✨';
-    }
-  }
 }
 
 class _StatItem extends StatelessWidget {

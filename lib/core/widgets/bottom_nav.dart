@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import '../theme/app_colors.dart';
+import '../utils/app_date_formats.dart';
 
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({super.key, required this.currentIndex});
@@ -40,7 +40,7 @@ class AppBottomNav extends StatelessWidget {
                 label: '통계분석',
                 isActive: currentIndex == 1,
                 onTap: () {
-                  final d = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                  final d = AppDateFormats.ymd.format(DateTime.now());
                   context.go('/analysis/$d');
                 },
               ),
