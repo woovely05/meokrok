@@ -20,8 +20,16 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = AppColors.of(context);
-    final user = ref.watch(authProvider).user;
-    if (user == null) return const Scaffold();
+    final authState = ref.watch(authProvider);
+
+    if (authState.status == AuthStatus.loading || authState.user == null) {
+      return Scaffold(
+        backgroundColor: colors.background,
+        body: Center(child: CircularProgressIndicator(color: colors.primary)),
+      );
+    }
+
+    final user = authState.user!;
 
     return Scaffold(
       backgroundColor: colors.background,

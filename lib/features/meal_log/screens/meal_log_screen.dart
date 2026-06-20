@@ -434,9 +434,10 @@ class _AddFoodModalState extends ConsumerState<_AddFoodModal> {
       _isLoadingAi = true;
       _error = null;
     });
-    final calories = await estimateCaloriesWithAI(name, amount, _unit);
+    final result = await estimateCaloriesWithAI(name, amount, _unit);
     setState(() => _isLoadingAi = false);
-    if (calories != null) {
+    if (result.calories != null) {
+      final calories = result.calories!;
       if (_unit == '개' || _unit == '인분') {
         // AI가 1단위당 칼로리 반환 → amount 곱해서 총 칼로리 계산
         final total = calories * (double.tryParse(_amountCtrl.text) ?? 1.0);
@@ -448,17 +449,31 @@ class _AddFoodModalState extends ConsumerState<_AddFoodModal> {
         _calCtrl.text = calories.toStringAsFixed(0);
       }
     } else {
-      setState(() => _error = 'AI 추정에 실패했습니다. 직접 입력해주세요.');
+      final msg = switch (result.failure) {
+        AiEstimateFailure.modelNotReady =>
+          'AI 모델이 아직 준비되지 않았어요. 앱을 재시작해주세요.',
+        AiEstimateFailure.inferenceError =>
+          'AI 추론 중 오류가 발생했어요. 직접 입력해주세요.',
+        AiEstimateFailure.parseFailed =>
+          'AI 응답을 인식하지 못했어요. 직접 입력해주세요.',
+        null => 'AI 추정에 실패했습니다. 직접 입력해주세요.',
+      };
+      setState(() => _error = msg);
     }
   }
 
   void _submit() {
     final name = _nameCtrl.text.trim();
     final amount = double.tryParse(_amountCtrl.text);
-    final cal = double.tryParse(_calCtrl.text);
+    final calText = _calCtrl.text.trim();
+    final cal = calText.isNotEmpty ? double.tryParse(calText) : null;
 
     if (name.isEmpty || amount == null || amount <= 0) {
       setState(() => _error = '음식명과 양을 올바르게 입력해주세요');
+      return;
+    }
+    if (calText.isNotEmpty && cal == null) {
+      setState(() => _error = '칼로리에 올바른 숫자를 입력해주세요');
       return;
     }
 

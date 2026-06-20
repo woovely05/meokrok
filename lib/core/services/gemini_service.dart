@@ -2,6 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:llamadart/llamadart.dart';
 import 'model_downloader.dart';
 
+enum AiEstimateFailure { modelNotReady, inferenceError, parseFailed }
+
+typedef AiResult = ({double? calories, AiEstimateFailure? failure});
+
 LlamaEngine? _engine;
 
 Future<LlamaEngine?> _getEngine() async {
@@ -27,14 +31,16 @@ Future<LlamaEngine?> _getEngine() async {
 }
 
 /// [foodName] [amount][unit]의 칼로리를 로컬 LLM으로 추정합니다.
-/// 실패하면 null을 반환합니다.
-Future<double?> estimateCaloriesWithAI(
+/// 실패 이유는 [AiResult.failure]에 담겨 반환됩니다.
+Future<AiResult> estimateCaloriesWithAI(
   String foodName,
   double amount,
   String unit,
 ) async {
   final engine = await _getEngine();
-  if (engine == null) return null;
+  if (engine == null) {
+    return (calories: null, failure: AiEstimateFailure.modelNotReady);
+  }
 
   final prompt = (unit == '개' || unit == '인분')
       ? '"$foodName" 1$unit당 칼로리는?'
@@ -55,9 +61,16 @@ Future<double?> estimateCaloriesWithAI(
     final text = buffer.toString().trim();
     debugPrint('[LocalLLM] 응답: "$text"');
     final match = RegExp(r'\d+').firstMatch(text);
-    return match != null ? double.tryParse(match.group(0)!) : null;
+    if (match == null) {
+      return (calories: null, failure: AiEstimateFailure.parseFailed);
+    }
+    final val = double.tryParse(match.group(0)!);
+    if (val == null) {
+      return (calories: null, failure: AiEstimateFailure.parseFailed);
+    }
+    return (calories: val, failure: null);
   } catch (e) {
     debugPrint('[LocalLLM] 추론 오류: $e');
-    return null;
+    return (calories: null, failure: AiEstimateFailure.inferenceError);
   }
 }

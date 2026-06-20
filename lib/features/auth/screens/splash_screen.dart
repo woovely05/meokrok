@@ -23,6 +23,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   bool _navigated = false;
   bool _modelReady = false;
   bool _isDownloading = false;
+  bool _downloadFailed = false;
   double _downloadProgress = 0.0;
   String _downloadStatus = '';
   ProviderSubscription<AuthState>? _authSub;
@@ -72,6 +73,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (!mounted) return;
     setState(() {
       _isDownloading = true;
+      _downloadFailed = false;
       _downloadStatus = 'AI 모델 준비 중...';
     });
 
@@ -88,12 +90,25 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         });
       }
     } catch (e) {
-      // 다운로드 실패 시 AI 기능만 비활성화되고 앱은 정상 진행
+      if (!mounted) return;
+      setState(() {
+        _isDownloading = false;
+        _downloadFailed = true;
+      });
+      return;
     }
 
     if (!mounted) return;
     setState(() {
       _isDownloading = false;
+      _modelReady = true;
+    });
+    _tryNavigate();
+  }
+
+  void _skipAiDownload() {
+    setState(() {
+      _downloadFailed = false;
       _modelReady = true;
     });
     _tryNavigate();
@@ -142,8 +157,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final splashColor = AppColors.of(context).primary;
     return Scaffold(
-      backgroundColor: AppColors.light.primary,
+      backgroundColor: splashColor,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -178,7 +194,61 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               ),
             ),
             const SizedBox(height: 36),
-            if (_isDownloading) ...[
+            if (_downloadFailed) ...[
+              Text(
+                '다운로드에 실패했어요',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: _checkAndDownloadModel,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '다시 시도',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: splashColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  GestureDetector(
+                    onTap: _skipAiDownload,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.5)),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'AI 없이 시작',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ] else if (_isDownloading) ...[
               SizedBox(
                 width: 180,
                 child: ClipRRect(
